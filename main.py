@@ -84,13 +84,13 @@ pwm.set_mode(L, pigpio.OUTPUT)
 # pwm.set_PWM_frequency(L, f)
 # pwm.set_servo_pulsewidth(L, 0)
 
-# 
-M = 13
-pwm.set_mode(M, pigpio.OUTPUT)
+# Track that moves the ball
+TRACK = 13
+pwm.set_mode(TRACK, pigpio.OUTPUT)
 
-# 
-D = 21
-pwm.set_mode(D, pigpio.OUTPUT)
+# Motor driver of the laucher
+LAUNCHER = 21
+pwm.set_mode(LAUNCHER, pigpio.OUTPUT)
 
 # Tackle Sensor
 TACKLE = 14
@@ -102,13 +102,25 @@ GPIO.setup(TACKLE, GPIO.IN)
 #
 # Controller Setup
 #
+"""
+XBOX 360
+
+  Y
+X   B
+  A
+
+A = SOUTH
+B = EAST
+X = NORTH
+Y = WEST
+"""
 
 # Acceptable controllers
 names = [
     "Xbox Wireless Controller",
-    "Wireless Controller", # PS5
-    "DualSense Wireless Controller"
-    "Wireless Controller"
+    "Wireless Controller",                  # PS4
+    "DualSense Wireless Controller",        # PS5 Dual Shock
+    "Xbox 360 Wireless Receiver (XBOX)",
 ]
 
 # Search until a listed device is connected
@@ -125,69 +137,38 @@ while dev == None:
 # Prints out device info at start
 # {('EV_SYN', 0): [('SYN_REPORT', 0), ('SYN_CONFIG', 1), ('SYN_DROPPED', 3), ('?', 21)], ('EV_KEY', 1): [(['BTN_A', 'BTN_GAMEPAD', 'BTN_SOUTH'], 304), (['BTN_B', 'BTN_EAST'], 305), (['BTN_NORTH', 'BTN_X'], 307), (['BTN_WEST', 'BTN_Y'], 308), ('BTN_TL', 310), ('BTN_TR', 311), ('BTN_TL2', 312), ('BTN_TR2', 313), ('BTN_SELECT', 314), ('BTN_START', 315), ('BTN_MODE', 316), ('BTN_THUMBL', 317), ('BTN_THUMBR', 318)], ('EV_ABS', 3): [(('ABS_X', 0), AbsInfo(value=124, min=0, max=255, fuzz=0, flat=0, resolution=0)), (('ABS_Y', 1), AbsInfo(value=129, min=0, max=255, fuzz=0, flat=0, resolution=0)), (('ABS_Z', 2), AbsInfo(value=0, min=0, max=255, fuzz=0, flat=0, resolution=0)), (('ABS_RX', 3), AbsInfo(value=128, min=0, max=255, fuzz=0, flat=0, resolution=0)), (('ABS_RY', 4), AbsInfo(value=127, min=0, max=255, fuzz=0, flat=0, resolution=0)), (('ABS_RZ', 5), AbsInfo(value=0, min=0, max=255, fuzz=0, flat=0, resolution=0)), (('ABS_HAT0X', 16), AbsInfo(value=0, min=-1, max=1, fuzz=0, flat=0, resolution=0)), (('ABS_HAT0Y', 17), AbsInfo(value=0, min=-1, max=1, fuzz=0, flat=0, resolution=0))], ('EV_FF', 21): [(['FF_EFFECT_MIN', 'FF_RUMBLE'], 80), ('FF_PERIODIC', 81), (['FF_SQUARE', 'FF_WAVEFORM_MIN'], 88), ('FF_TRIANGLE', 89), ('FF_SINE', 90), (['FF_GAIN', 'FF_MAX_EFFECTS'], 96)]}
 print(dev)
-# print(dev.capabilities(verbose=True))
+print(dev.capabilities(verbose=True))
 
-# Controller Constants
-# TODO Use string constants instead
-if dev.name == "Xbox Wireless Controller":
-    LX    =   0 #WARNING
-    LY    =   1
-    RX    =   2
-    RY    =   5
-    HOME  = 172
-    A     = 304
-    B     = 305
-    X     = 306
-    Y     = 307
-    LB    = 310
-    RB    = 309
-    BOX   = 310
-    LINES = 311
-    MIN = 0         # Joystick min
-    MAX = 2**16-1   # Joystick max
+# Universal Controller Constants
+A     = ecodes.BTN_A
+B     = ecodes.BTN_B
+X     = ecodes.BTN_X
+Y     = ecodes.BTN_Y
+LB    = ecodes.BTN_TL
+RB    = ecodes.BTN_TR
+BACK  = ecodes.BTN_SELECT
+START = ecodes.BTN_START
+HOME  = ecodes.BTN_MODE
+
+match dev.name:
+
+    case "Xbox Wireless Controller":
+        LX    =   0
+        LY    =   1
+        RX    =   2     # ABS_RZ
+        RY    =   5     # ABS_Z
+        BACK  = ecodes.KEY_BACK
+        MIN = 0         # Joystick min
+        MAX = 2**16-1   # Joystick max
     
-elif dev.name == "Wireless Controller": # PS5 Dual Shock
-    LX    =   0 #WARNING
-    LY    =   1
-    RX    =   3
-    RY    =   4
-    HOME  = 316
-    LB    = 900
-    A     = 304 # SOUTH
-    B     = 305
-    X     = 307 # NORTH
-    Y     = 308 # WEST
-    MIN = 0         # Joystick min
-    MAX = 2**8-1    # Joystick max
-    
-elif dev.name == "DualSense Wireless Controller": # PS5 Dual Shock
-    LX    =   0 #WARNING
-    LY    =   1
-    RX    =   3
-    RY    =   4
-    HOME  = 316
-    LB    = 900
-    A     = 304 # SOUTH
-    B     = 305
-    X     = 307 # NORTH
-    Y     = 308 # WEST
-    MIN = 0         # Joystick min
-    MAX = 2**8-1    # Joystick max
-
-
-
-
-
-# RX = 'ABS_RX'
-
-# N = ecodes.BTN_NORTH
-# E = ecodes.BTN_EAST
-# W = ecodes.BTN_WEST
-# S = ecodes.BTN_SOUTH
-
-
-# ABS_MIN = dev.
-
+    case "Wireless Controller" | "DualSense Wireless Controller":
+        LX    =   0
+        LY    =   1
+        RX    =   3
+        RY    =   4
+        MIN = 0         # Joystick min
+        MAX = 2**8-1    # Joystick max
+        
 
 #
 # Rummble
@@ -392,19 +373,17 @@ try:
         # Football Launcher
         #
         
-        if Y in dev.active_keys():
-            pwm.set_servo_pulsewidth(M, 2000)
-        elif A in dev.active_keys():
-            pwm.set_servo_pulsewidth(M, 1000)
+        if LB in dev.active_keys():
+            pwm.set_servo_pulsewidth(TRACK, 2000)
+            pwm.set_servo_pulsewidth(LAUNCHER, 1500)
+        elif RB in dev.active_keys():
+            pwm.set_servo_pulsewidth(TRACK, pMax)
+            pwm.set_servo_pulsewidth(LAUNCHER, pMax)
         else:
-            pwm.set_servo_pulsewidth(M, 1500)
+            pwm.set_servo_pulsewidth(TRACK, 1500)
+            pwm.set_servo_pulsewidth(LAUNCHER, 1500)
             
-        if B in dev.active_keys():
-            pwm.set_servo_pulsewidth(D, 2000)
-        else:
-            pwm.set_servo_pulsewidth(D, 1500)
-       
-        
+
         
         #
         # Debug Text
@@ -489,10 +468,8 @@ finally:
 #
  
 """
-sudo apt install code
-
+#!/bin/bash
 pip install evdev
-
 sudo systemctl enable pigpiod
 """
 
@@ -517,4 +494,10 @@ sudo crontab -e
 @reboot sh /home/pi/Desktop/launcher.sh >/home/pi/Desktop/cronlog 2>&1
 
 sudo reboot
+"""
+
+"""
+sudo python3 /home/pi/Desktop/main.py >> /home/pi/Desktop/log.txt 2>&1 &
+
+sudo killall python3
 """
