@@ -1,6 +1,6 @@
-# RaspiBot
+# RobotCore
 
-RaspiBot is a simple Python program to set up a Raspberry Pi as a robot.
+RobotCore is a simple Python program to set up a Raspberry Pi as a robot.
 
 ## Dependancies
 
