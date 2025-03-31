@@ -26,8 +26,6 @@ from select import select
 # Print date and time
 print(time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime()))
 
-# time.sleep(30)
-
 print("Importing 3rd party libraries...")
 
 # Append system path so that evdev can be imported
@@ -59,9 +57,8 @@ f = 50
 
 # PWM ranges
 pMin = 1000
+pMid = 1500
 pMax = 2000
-
-
 
     
 
@@ -150,25 +147,32 @@ BACK  = ecodes.BTN_SELECT
 START = ecodes.BTN_START
 HOME  = ecodes.BTN_MODE
 
-match dev.name:
+if dev.name == "Xbox 360 Wireless Receiver (XBOX)":
+    LX    =   0
+    LY    =   1
+    RX    =   3
+    RY    =   4
+    MIN   =  -2**15   # Joystick min
+    MAX   =   2**15-1 # Joystick max
 
-    case "Xbox Wireless Controller":
-        LX    =   0
-        LY    =   1
-        RX    =   2     # ABS_RZ
-        RY    =   5     # ABS_Z
-        BACK  = ecodes.KEY_BACK
-        MIN = 0         # Joystick min
-        MAX = 2**16-1   # Joystick max
+elif "Xbox" in dev.name:
+    LX    =   0
+    LY    =   1
+    RX    =   2     # ABS_RZ
+    RY    =   5     # ABS_Z
+    BACK  = ecodes.KEY_BACK
+    MIN = 0         # Joystick min
+    MAX = 2**16-1   # Joystick max
     
-    case "Wireless Controller" | "DualSense Wireless Controller":
-        LX    =   0
-        LY    =   1
-        RX    =   3
-        RY    =   4
-        MIN = 0         # Joystick min
-        MAX = 2**8-1    # Joystick max
-        
+else:
+    LX    =   0
+    LY    =   1
+    RX    =   3
+    RY    =   4
+    MIN = 0         # Joystick min
+    MAX = 2**8-1    # Joystick max
+       
+
 
 #
 # Rummble
@@ -240,9 +244,9 @@ def read_event(event):
 
     # Left button reverses
     if LB in dev.active_keys():
-        rev = -1
-    else:
         rev = 1
+    else:
+        rev = -1
 
     # Home Button Pressed
     if HOME in dev.active_keys():
@@ -253,10 +257,10 @@ def read_event(event):
 
         # Shift range of joystick to [-1,1]
         if event.code == RX:
-            rightX = event.value / MAX * 2 - 1
+            rightX = (event.value - MIN) / (MAX - MIN) * 2 - 1
         else:
-            rightY = event.value / MAX * 2 - 1
-            
+            rightY = (event.value - MIN) / (MAX - MIN) * 2 - 1
+   
         if (abs(rightY) < ERROR): rightY = 0
         if (abs(rightX) < ERROR): rightX = 0
         
@@ -354,7 +358,7 @@ try:
         
         # Initially Start with the velocity
         pL = vL * -scale
-        pR = vR *  scale
+        pR = vR * -scale
     
         # Adjust to PWM values        
         pDif = pMax - pMin
@@ -374,14 +378,14 @@ try:
         #
         
         if LB in dev.active_keys():
-            pwm.set_servo_pulsewidth(TRACK, 2000)
-            pwm.set_servo_pulsewidth(LAUNCHER, 1500)
+            pwm.set_servo_pulsewidth(TRACK, pMin)
+            pwm.set_servo_pulsewidth(LAUNCHER, pMid)
         elif RB in dev.active_keys():
             pwm.set_servo_pulsewidth(TRACK, pMax)
             pwm.set_servo_pulsewidth(LAUNCHER, pMax)
         else:
-            pwm.set_servo_pulsewidth(TRACK, 1500)
-            pwm.set_servo_pulsewidth(LAUNCHER, 1500)
+            pwm.set_servo_pulsewidth(TRACK, pMid)
+            pwm.set_servo_pulsewidth(LAUNCHER, pMid)
             
 
         
@@ -407,35 +411,21 @@ try:
             if not DISABLE_MOTORS:
                 #pwm.hardware_PWM(L, f, pL)
                 #pwm.hardware_PWM(R, f, pR)
-             
-                """
-                if B in dev.active_keys():
-                    pwm.set_servo_pulsewidth(L, 0)
-                    pwm.set_servo_pulsewidth(R, 0)
-                    print("0")
-                    time.sleep(1)
-                    pwm.set_servo_pulsewidth(L, pMax)
-                    pwm.set_servo_pulsewidth(R, pMax)
-                    print("Max")
-                    time.sleep(1)
-                    pwm.set_servo_pulsewidth(L, pMin)
-                    pwm.set_servo_pulsewidth(R, pMin)
-                    print("Min")
-                    time.sleep(1)
-                
-                else:
-                """
                     
                 pwm.set_servo_pulsewidth(L, pL)
                 pwm.set_servo_pulsewidth(R, pR)
         
         # Otherwise, full stop
         else:
-            if not DISABLE_MOTORS:
-                pwm.hardware_PWM(L, f, 75000)
-                pwm.hardware_PWM(R, f, 75000)
-            print("HIT")
+            print("Tackled")
             
+            # Instant stop
+            if not DISABLE_MOTORS:
+                # pwm.hardware_PWM(L, f, 75000)
+                # pwm.hardware_PWM(R, f, 75000)
+                pwm.set_servo_pulsewidth(L, pMid)
+                pwm.set_servo_pulsewidth(R, pMid)
+
             # Vibrate controller
             rumble = ff.Rumble(strong_magnitude=0x0000, weak_magnitude=0xffff)
             effect_type = ff.EffectType(ff_rumble_effect=rumble)
@@ -501,3 +491,4 @@ sudo python3 /home/pi/Desktop/main.py >> /home/pi/Desktop/log.txt 2>&1 &
 
 sudo killall python3
 """
+
